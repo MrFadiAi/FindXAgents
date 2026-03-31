@@ -21,8 +21,8 @@ export const renderTemplateTool: Tool = {
       },
       language: {
         type: "string",
-        enum: ["nl", "en"],
-        description: "Email language (default: nl)",
+        enum: ["en", "nl", "ar"],
+        description: "Email language (default: en)",
       },
       company_name: { type: "string" },
       contact_name: { type: "string" },
@@ -35,7 +35,7 @@ export const renderTemplateTool: Tool = {
     required: ["has_website", "company_name", "contact_name", "city"],
   },
   async execute(input) {
-    const language = (input.language as "nl" | "en") || "nl";
+    const language = (input.language as "en" | "nl" | "ar") || "en";
     const template = pickColdTemplate(input.has_website as boolean, language);
     const vars: TemplateVariables = {
       companyName: input.company_name as string,

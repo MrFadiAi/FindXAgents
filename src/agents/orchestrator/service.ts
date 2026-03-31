@@ -7,7 +7,7 @@ export async function triggerAgentPipeline(
   query: string,
   sync = false,
   maxResults?: number,
-  language: "nl" | "en" = "nl",
+  language: "en" | "nl" | "ar" = "en",
 ): Promise<{ runId: string; status: string } | PipelineResult> {
   // Create pipeline run record
   const run = await prisma.agentPipelineRun.create({

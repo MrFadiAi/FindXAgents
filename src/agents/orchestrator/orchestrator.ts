@@ -12,7 +12,7 @@ export interface PipelineInput {
   /** Number of leads to analyze concurrently (default: 3) */
   analysisBatchSize?: number;
   /** Email language: "nl" (Dutch, default) or "en" (English) */
-  language?: "nl" | "en";
+  language?: "en" | "nl" | "ar";
 }
 
 export interface PipelineResult {

@@ -3,7 +3,7 @@
 // Dutch templates use formal "u" register for professional business communication
 
 export type EmailTone = "professional" | "friendly" | "urgent";
-export type EmailLanguage = "nl" | "en";
+export type EmailLanguage = "en" | "nl" | "ar";
 
 export interface TemplateVariables {
   companyName: string;
