@@ -1,0 +1,190 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum LeadStatus {
+  discovered
+  analyzing
+  analyzed
+  contacting
+  responded
+  qualified
+  won
+  lost
+}
+
+enum OutreachStatus {
+  draft
+  pending_approval
+  approved
+  sent
+  saved
+  opened
+  replied
+  bounced
+  failed
+}
+
+model Lead {
+  id            String        @id @default(cuid())
+  businessName  String
+  kvkNumber     String?       @unique
+  address       String?
+  city          String
+  industry      String?
+  website       String?
+  hasWebsite    Boolean        @default(false)
+  phone         String?
+  email         String?
+  source        String
+  sourceId      String?
+  status        LeadStatus     @default(discovered)
+  leadScore        Int?
+  pipelineStageId String?
+  pipelineStage PipelineStage? @relation(fields: [pipelineStageId], references: [id])
+  discoveredAt  DateTime       @default(now())
+  analyses      Analysis[]
+  outreaches    Outreach[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([city])
+  @@index([industry])
+  @@index([status])
+  @@index([source])
+  @@index([hasWebsite])
+}
+
+model Analysis {
+  id                 String   @id @default(cuid())
+  leadId             String
+  lead               Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type               String
+  score              Int?
+  findings           Json
+  opportunities      Json?
+  socialPresence     Json?    @default("{}")
+  competitors        Json?    @default("[]")
+  serviceGaps        Json?    @default("[]")
+  revenueImpact      Json?    @default("{}")
+  analyzedAt         DateTime @default(now())
+  createdAt          DateTime @default(now())
+
+  @@index([leadId])
+}
+
+model Outreach {
+  id                  String         @id @default(cuid())
+  leadId              String
+  lead                Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  status              OutreachStatus @default(draft)
+  subject             String
+  body                String
+  personalizedDetails Json
+  sentAt              DateTime?
+  openedAt            DateTime?
+  repliedAt           DateTime?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  @@index([leadId])
+  @@index([status])
+}
+
+model PipelineStage {
+  id     String  @id @default(cuid())
+  name   String  @unique
+  order  Int     @unique
+  leads  Lead[]
+}
+
+model AgentPipelineRun {
+  id             String     @id @default(cuid())
+  query          String
+  status         String     @default("running")
+  leadsFound     Int        @default(0)
+  leadsAnalyzed  Int        @default(0)
+  emailsDrafted  Int        @default(0)
+  error          String?
+  createdAt      DateTime   @default(now())
+  completedAt    DateTime?
+
+  agentLogs      AgentLog[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Agent {
+  id            String       @id @default(cuid())
+  name          String       @unique
+  displayName   String
+  description   String
+  role          String
+  icon          String       @default("Bot")
+
+  model         String       @default("claude-sonnet-4-20250514")
+  maxIterations Int          @default(15)
+  maxTokens     Int          @default(4096)
+  temperature   Float?
+
+  identityMd    String       @default("")
+  soulMd        String       @default("")
+  toolsMd       String       @default("")
+  systemPrompt  String       @default("")
+  toolNames     Json         @default("[]")
+
+  pipelineOrder Int          @default(0)
+  isActive      Boolean      @default(true)
+
+  skills        AgentSkill[]
+  logs          AgentLog[]
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([pipelineOrder])
+}
+
+model AgentSkill {
+  id          String   @id @default(cuid())
+  agentId     String
+  agent       Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  name        String
+  description String
+  toolNames   Json     @default("[]")
+  promptAdd   String   @default("")
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([agentId, name])
+  @@index([agentId])
+}
+
+model AgentLog {
+  id             String            @id @default(cuid())
+  agentId        String
+  agent          Agent             @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  pipelineRunId  String
+  pipelineRun    AgentPipelineRun  @relation(fields: [pipelineRunId], references: [id], onDelete: Cascade)
+  phase          String
+  level          String            @default("info")
+  message        String
+  toolName       String?
+  toolInput      Json?
+  toolOutput     String?
+  duration       Int?
+  tokens         Int?
+  createdAt      DateTime          @default(now())
+
+  @@index([pipelineRunId])
+  @@index([agentId])
+  @@index([createdAt])
+}

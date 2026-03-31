@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+@theme {
+  --color-findx: #2563eb;
+  --color-findx-dark: #1d4ed8;
+  --color-findx-light: #dbeafe;
+}
+
+/* Dark theme custom properties */
+:root {
+  /* Backgrounds */
+  --bg-primary: #0f172a;       /* slate-900 */
+  --bg-secondary: #1e293b;     /* slate-800 */
+  --bg-surface: #020617;       /* slate-950 */
+  --bg-card: #1e293b;          /* slate-800 */
+
+  /* Text */
+  --text-primary: #f1f5f9;     /* slate-100 */
+  --text-secondary: #94a3b8;   /* slate-400 */
+
+  /* Borders */
+  --border-default: #334155;   /* slate-700 */
+
+  /* Accents */
+  --accent: #3b82f6;           /* blue-500 */
+  --accent-hover: #2563eb;     /* blue-600 */
+  --accent-success: #10b981;   /* emerald-500 */
+  --accent-success-hover: #059669; /* emerald-600 */
+  --accent-warning: #f59e0b;   /* amber-500 */
+  --accent-error: #ef4444;     /* red-500 */
+}
+
+html {
+  color-scheme: dark;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+body {
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Kanban column scroll */
+.kanban-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-default) transparent;
+}
+
+/* Subtle pulse for high-scoring leads */
+@keyframes subtle-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.75; }
+}
+.animate-subtle-pulse {
+  animation: subtle-pulse 2s ease-in-out infinite;
+}
+
+/* Focus ring utility */
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Smooth transitions for interactive elements */
+button, a, [role="button"] {
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Agent activity shimmer effect */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent 0%, rgba(59,130,246,0.08) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+/* Live activity dot pulse */
+@keyframes live-dot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.5); opacity: 0.5; }
+}
+.animate-live-dot {
+  animation: live-dot 1.5s ease-in-out infinite;
+}

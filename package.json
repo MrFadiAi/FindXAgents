@@ -1,0 +1,48 @@
+{
+  "name": "findx",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agent-powered business prospecting platform for the Netherlands market",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --require ./src/setup-tmp.cjs src/server.ts",
+    "dev:web": "npm run dev --workspace=web",
+    "build": "tsc",
+    "build:web": "npm run build --workspace=web",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:studio": "prisma studio",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.0.0",
+    "@fastify/websocket": "^11.0.0",
+    "@prisma/client": "^6.5.0",
+    "bullmq": "^5.41.0",
+    "cheerio": "^1.0.0",
+    "fastify": "^5.2.0",
+    "ioredis": "^5.6.0",
+    "lighthouse": "^13.0.3",
+    "openai": "^6.33.0",
+    "pdfkit": "^0.18.0",
+    "playwright": "^1.51.0",
+    "resend": "^4.2.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "@types/pdfkit": "^0.17.5",
+    "prisma": "^6.5.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.1.0"
+  },
+  "workspaces": [
+    "web"
+  ]
+}
