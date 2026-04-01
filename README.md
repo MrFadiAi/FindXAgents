@@ -154,9 +154,9 @@ The dashboard starts on **http://localhost:3000**. Open it in your browser.
 
 ## What FindX Does
 
-1. **Discover** — Finds Dutch businesses via KVK (Chamber of Commerce) and Google Places APIs
+1. **Discover** — Finds businesses across multiple countries via local business registries (KVK, Companies House, Handelsregister, etc.) and Google Places APIs
 2. **Analyze** — Runs Lighthouse audits, detects tech stacks, scores websites 0-100
-3. **Outreach** — Generates personalized cold emails in **Dutch or English** using AI
+3. **Outreach** — Generates personalized cold emails in **English, Dutch, or Arabic** using AI
 4. **Track** — Monitors email opens, replies, and bounces via Resend webhooks
 
 ## Using the App
@@ -181,14 +181,15 @@ Manage data — clear all data, re-seed agents, import/export CSV.
 
 ## Language Support
 
-Outreach emails can be generated in two languages:
+Outreach emails can be generated in three languages:
 
 | Language | Code | Style |
 |----------|------|-------|
-| **Dutch** | `nl` | Formal business Dutch (u/uw register), Dutch subject lines |
 | **English** | `en` | Professional English, British spelling |
+| **Dutch** | `nl` | Formal business Dutch (u/uw register), Dutch subject lines |
+| **Arabic** | `ar` | Professional Modern Standard Arabic, full RTL support |
 
-Select the language from the dropdown on the **Agents > Pipeline** tab before running a pipeline. Default is Dutch.
+Select the language from the dropdown on the **Agents > Pipeline** tab before running a pipeline. Default is English.
 
 ## Architecture
 
@@ -342,15 +343,20 @@ All endpoints are under `/api/`.
 ## Example Usage
 
 ```bash
-# Run the full agent pipeline (Dutch emails)
+# Run the full agent pipeline (English emails)
 curl -X POST http://localhost:3001/api/agents/run \
   -H "Content-Type: application/json" \
-  -d '{"query":"restaurants in Amsterdam","language":"nl","maxResults":10}'
+  -d '{"query":"restaurants in Amsterdam","language":"en","maxResults":10}'
 
-# Run with English emails
+# Run with Dutch emails
 curl -X POST http://localhost:3001/api/agents/run \
   -H "Content-Type: application/json" \
-  -d '{"query":"dentists in Rotterdam","language":"en","maxResults":5}'
+  -d '{"query":"tandartsen in Rotterdam","language":"nl","maxResults":5}'
+
+# Run with Arabic emails (e.g., businesses in Dubai)
+curl -X POST http://localhost:3001/api/agents/run \
+  -H "Content-Type: application/json" \
+  -d '{"query":"restaurants in Dubai","language":"ar","maxResults":5}'
 
 # Analyze a single lead
 curl -X POST http://localhost:3001/api/leads/{leadId}/analyze \
@@ -383,11 +389,11 @@ curl -X POST http://localhost:3001/api/leads/{leadId}/outreach/generate \
 
 The core of FindX is a 3-phase AI agent pipeline:
 
-1. **Research Agent** — Takes a search query (e.g., "restaurants in Amsterdam") and finds matching Dutch businesses using web search, KVK, and Google Places. Saves them as leads.
+1. **Research Agent** — Takes a search query (e.g., "restaurants in Amsterdam") and finds matching businesses across multiple countries using web search, local business registries (KVK, Companies House, Handelsregister, etc.), and Google Places. Saves them as leads.
 
 2. **Analysis Agent** — For each lead with a website, runs Lighthouse audits, detects the tech stack, checks SSL, scores the website 0-100, Identifies improvement opportunities.
 
-3. **Outreach Agent** — Reads analysis results and generates personalized cold emails. Supports Dutch (`nl`) and English (`en`). References specific findings (e.g., "Uw website laadt in 8.2 seconden").
+3. **Outreach Agent** — Reads analysis results and generates personalized cold emails in English (`en`), Dutch (`nl`), or Arabic (`ar`). References specific findings (e.g., "Your website loads in 8.2 seconds").
 
 Agents are configurable through the dashboard — edit identity, personality, tools, and skills at `/agents/[name]`.
 
