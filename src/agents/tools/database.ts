@@ -83,7 +83,7 @@ export const saveLeadTool: Tool = {
         businessName: lead.businessName,
         city: lead.city,
         website: lead.website,
-        created: lead.createdAt === lead.updatedAt,
+        created: lead.createdAt?.getTime() === lead.updatedAt?.getTime(),
       });
     }
 

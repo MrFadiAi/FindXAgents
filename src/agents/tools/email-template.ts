@@ -46,7 +46,7 @@ export const renderTemplateTool: Tool = {
     const vars: TemplateVariables = {
       companyName: strip(input.company_name as string),
       contactName: strip(input.contact_name as string),
-      industry: (input.industry as string) || "lokale markt",
+      industry: (input.industry as string) ?? "lokale markt",
       city: input.city as string,
       specificInsight: strip((input.specific_insight as string) || ""),
       improvementArea: strip((input.improvement_area as string) || ""),

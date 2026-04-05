@@ -3,7 +3,9 @@
 
 import type { Tool } from "../core/types.js";
 
-const SEARXNG_BASE_URL = process.env.SEARXNG_URL || "http://localhost:8080";
+function getSearxngBaseUrl(): string {
+  return process.env.SEARXNG_URL || "http://localhost:8080";
+}
 
 export interface SearchResult {
   title: string;
@@ -28,7 +30,7 @@ export async function searxngSearch(
   if (options?.language) params.set("language", options.language);
   if (options?.engines) params.set("engines", options.engines);
 
-  const url = `${SEARXNG_BASE_URL}/search?${params.toString()}`;
+  const url = `${getSearxngBaseUrl()}/search?${params.toString()}`;
 
   const response = await fetch(url, {
     signal: AbortSignal.timeout(15000),
@@ -105,7 +107,7 @@ export const webSearchTool: Tool = {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       return JSON.stringify({
-        error: `SearXNG search failed: ${message}. Ensure SearXNG is running at ${SEARXNG_BASE_URL}`,
+        error: `SearXNG search failed: ${message}. Ensure SearXNG is running at ${getSearxngBaseUrl()}`,
         results: [],
       });
     }

@@ -20,11 +20,12 @@ export const runLighthouseTool: Tool = {
     // Lighthouse's internal performance.measure() can throw from timers on
     // Node.js 22+.  Suppress these uncaught exceptions during the audit.
     const suppressed: Error[] = [];
+    let fatalError: Error | null = null;
     const handler = (err: Error) => {
       if (err.message?.includes("performance mark has not been set")) {
         suppressed.push(err);
       } else {
-        throw err; // re-throw genuinely unexpected errors
+        fatalError = err;
       }
     };
     process.on("uncaughtException", handler);
@@ -35,6 +36,13 @@ export const runLighthouseTool: Tool = {
         "../../modules/analyzer/audits/lighthouse.js"
       );
       const result = await runLighthouseAudit(url);
+
+      if (fatalError) {
+        return JSON.stringify({
+          error: fatalError.message,
+        });
+      }
+
       return JSON.stringify({
         categories: result.categories,
         findings: result.findings.slice(0, 20),

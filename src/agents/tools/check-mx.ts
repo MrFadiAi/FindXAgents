@@ -19,7 +19,7 @@ export const checkMxTool: Tool = {
     required: ["domain"],
   },
   async execute(input: Record<string, unknown>) {
-    const domain = (input.domain as string).replace(/^https?:\/\//, "").replace(/\/.*$/, "").toLowerCase();
+    const domain = (input.domain as string).replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/:\d+$/, "").toLowerCase();
 
     try {
       // Check MX records
