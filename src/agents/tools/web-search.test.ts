@@ -76,8 +76,7 @@ describe('searxngSearch', () => {
     process.env.SEARXNG_URL = 'http://custom-searx:9999';
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ results: [] },
-      ),
+      json: async () => ({ results: [] }),
     });
 
     await searxngSearch('test');
