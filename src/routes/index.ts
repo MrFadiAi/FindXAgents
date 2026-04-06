@@ -512,7 +512,7 @@ export function registerRoutes(app: FastifyInstance) {
     // Queue background job
     const job = await outreachGenerateQueue.add(
       `outreach:generate:${id}`,
-      { leadId: id, analysisId: body?.analysisId, tone: body?.tone },
+      { leadId: id, analysisId: body?.analysisId, tone: body?.tone, language: body?.language },
       { attempts: 3, backoff: { type: "exponential", delay: 5000 } },
     );
 

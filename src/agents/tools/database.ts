@@ -298,7 +298,7 @@ export const saveOutreachTool: Tool = {
         personalizedDetails: {
           ...personalizedDetails,
           tone: input.tone || "professional",
-          language: input.language || "nl",
+          language: input.language || "en",
           htmlBody: input.htmlBody || undefined,
         },
       },

@@ -102,7 +102,7 @@ export async function generateOutreachEmail(
   };
 
   const tone = options?.tone ?? "professional";
-  const language = options?.language ?? "nl";
+  const language = options?.language ?? "en";
 
   // Generate primary email
   const email = await generatePersonalizedEmail(leadContext, tone, language);
@@ -357,6 +357,7 @@ export async function processGenerateJob(data: OutreachGenerateJobData): Promise
   const result = await generateOutreachEmail(data.leadId, {
     analysisId: data.analysisId,
     tone: data.tone,
+    language: data.language,
   });
   // The generateOutreachEmail already creates the DB record
   // Return a placeholder — the actual outreach ID is from the DB

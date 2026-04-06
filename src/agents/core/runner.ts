@@ -19,6 +19,7 @@ export async function runAgentWithLogging(
   agentConfig: AgentConfig & { id: string },
   context: RunContext,
   userMessage: string,
+  onToolResult?: (toolName: string, output: string) => void,
 ): Promise<AgentRunResult> {
   const toolCalls: ToolCallLog[] = [];
   let totalInputTokens = 0;
@@ -119,6 +120,11 @@ export async function runAgentWithLogging(
             toolOutput = `Tool error: ${err instanceof Error ? err.message : String(err)}`;
           }
           const toolDuration = Date.now() - toolStart;
+
+          // Stream tool results to caller
+          if (onToolResult && !toolError) {
+            try { onToolResult(toolUse.name, toolOutput); } catch {}
+          }
 
           return {
             toolUse,

@@ -10,6 +10,7 @@ export interface OutreachGenerateJobData {
   leadId: string;
   analysisId?: string;
   tone?: "professional" | "friendly" | "urgent";
+  language?: "en" | "nl" | "ar";
 }
 
 export interface OutreachSendJobData {
