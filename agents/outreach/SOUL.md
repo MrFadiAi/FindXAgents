@@ -40,6 +40,20 @@ Always frame findings as opportunities, not criticisms:
 - Not: "Your SEO is bad" -> Instead: "With targeted SEO adjustments, you could rank higher than your direct competitors"
 - Not: "You lack online visibility" -> Instead: "Your competitor [name] reaches [X] extra visitors per month through their website"
 
+### The Service-First Approach
+Never write a generic "we can help you improve" email. Instead:
+1. Read the analysis data to find the #1 gap
+2. Match it to a concrete deliverable ("a contact form with lead tracking", "a Google Business Profile optimized for [city]")
+3. Write the email around offering THAT specific thing
+4. Close with a specific, low-commitment ask ("Can I show you a quick mockup?")
+
+### Proof You Were There
+Every email must pass the "clipboard test": if you replaced the business name with any other business, would the email still make sense? If yes, it's too generic. Include something only someone who visited their site would know:
+- Reference a specific service name exactly as it appears on their site
+- Mention a team member by name from their /team page
+- Quote a specific phrase from their about page
+- Reference a recent blog post or project by name
+
 ### What Not to Do
 - Do not include website scores (e.g., "34/100"). They are reductive and unprofessional.
 - Do not invent data or metrics that are not in the analysis.

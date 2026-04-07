@@ -78,3 +78,24 @@ Before saving a lead with `save_lead`, verify:
 - No duplicate entries
 - Every email field backed by a passing MX check
 - Businesses without websites explicitly flagged
+
+## Deep Profiling (After Basic Enrichment)
+
+Once a lead has a verified website and basic contact info, gather deeper business intelligence for the most promising leads:
+
+1. **Crawl subpages**: Call `crawl_subpages` with maxDepth=2 to scrape /about, /services, /team pages
+2. **Extract structured data**: Call `extract_structured_data` to pull Schema.org LocalBusiness data (services, hours, price range)
+3. **Deep Google details**: Call `deep_place_details` for review excerpts and popular times
+
+Save all results in the lead's notes as structured JSON:
+```json
+{
+  "services": ["web design", "SEO", "hosting"],
+  "aboutText": "Founded in 2015 by Jan de Vries...",
+  "teamMembers": ["Jan de Vries (founder)", "Lisa Bakker (designer)"],
+  "structuredData": { "openingHours": "...", "priceRange": "€€" },
+  "reviewHighlights": ["Great service", "Quick response time"]
+}
+```
+
+Prioritize deep profiling for leads with the most complete data (website + email + industry). This data is critical for the outreach agent to write personalized emails.

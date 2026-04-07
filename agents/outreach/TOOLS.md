@@ -9,12 +9,27 @@
 ## Data Enrichment
 - **extract_emails**: Extract email addresses from the lead's website if not already available. Returns a list of found addresses.
 - **check_mx**: Verify a domain can receive email before drafting. Always check before relying on an extracted email address.
-- **scrape_page**: Get additional context from the lead's website for deeper personalization. Only use when analysis data is insufficient for 2 specific references.
+- **scrape_page**: Get additional context from the lead's website for deeper personalization. Use when you need details beyond what the analysis provided.
+- **crawl_subpages**: Crawl /about, /services, /team pages for owner names, service lists, and business story.
+- **extract_structured_data**: Pull structured business data (services, hours, price range) from the lead's site.
+- **scrape_competitor_site**: Quick-scan a competitor's website for comparison data.
+- **analyze_forms_cta**: Analyze forms and call-to-action buttons on the lead's site.
+- **check_website**: Verify a website URL is accessible.
 
 ## CRITICAL: No Send Capability
 This agent does **NOT** have access to `send_email`. Emails are drafted and saved for human review only. Sending requires separate approval through the outreach workflow.
 
 ## Execution Strategy
+
+### Step 0: Pre-Write Research (NEW)
+Before drafting, gather specific personalization material:
+1. Read the analysis data — identify serviceGaps[0] (biggest gap) and opportunities[0] (biggest opportunity)
+2. If the lead has a website, use crawl_subpages or scrape_page to find:
+   - Owner/team member names
+   - Exact service names as listed on their site
+   - Something unique (awards, years in business, specialties)
+3. Use extract_structured_data for structured details
+4. You now have: specific finding + specific service to offer + proof you visited their site
 
 ### Step 1: Review Input Data
 Review the lead data and analysis findings provided. Identify the 2-3 most impactful findings for personalization. Prioritize:

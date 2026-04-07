@@ -47,12 +47,20 @@ For results from `google_places_search`:
 - Save each verified business immediately with `save_lead`
 - Include all collected data in a single call -- do not save incrementally
 
+## Deep Profiling
+- **crawl_subpages**: Crawl subpages of a website. Returns content from /about, /services, /team, /contact pages. Use maxDepth=2 for best results.
+- **extract_structured_data**: Extract Schema.org/JSON-LD structured data from a webpage. Returns LocalBusiness details, services, opening hours, price range.
+- **deep_place_details**: Get rich Google Business Profile data — review excerpts, Q&A, photo count, popular times, detailed category info.
+
+### Step 2.5: Deep Profiling (for leads with websites)
+For the most promising leads (have website + email):
+1. `crawl_subpages` — get about, services, team page content
+2. `extract_structured_data` — pull Schema.org business details
+3. `deep_place_details` — get Google review excerpts
+
+Save results in the lead notes as structured JSON with keys: services, aboutText, teamMembers, structuredData, reviewHighlights.
+
 ### Parallel execution
 Call independent tools in parallel when possible. The runner supports concurrent tool calls. Examples of safe parallel calls:
 - `check_website` + `get_place_details` (different data sources)
 - `extract_emails` + `extract_social_links` + `check_ssl` (same site, different data)
-
-## Planned Tools (not yet available)
-These tools are planned for a future release. Reference them in your reasoning but do not attempt to call them:
-- **domain_age_check**: Check how old a domain is. Useful for identifying new businesses (higher outreach potential) vs. established ones.
-- **competitor_compare**: Find competitors in the same city/industry. When available, use for the top 5 most promising leads only -- it is an expensive call.

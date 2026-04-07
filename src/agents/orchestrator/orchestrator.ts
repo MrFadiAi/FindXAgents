@@ -417,6 +417,12 @@ export class AgentOrchestrator {
             competitors: latestAnalysis.competitors,
             serviceGaps: latestAnalysis.serviceGaps,
             revenueImpact: latestAnalysis.revenueImpact,
+            crawlData: latestAnalysis.crawlData,
+            structuredData: latestAnalysis.structuredData,
+            competitorAnalysis: latestAnalysis.competitorAnalysis,
+            contentAudit: latestAnalysis.contentAudit,
+            seoAudit: latestAnalysis.seoAudit,
+            formData: latestAnalysis.formData,
           },
         }, null, 2);
 
