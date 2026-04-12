@@ -22,6 +22,7 @@ enum OutreachStatus {
   draft
   pending_approval
   approved
+  scheduled
   sent
   saved
   opened
@@ -110,6 +111,9 @@ model Outreach {
   sentAt              DateTime?
   openedAt            DateTime?
   repliedAt           DateTime?
+  scheduledAt         DateTime?
+  followUpCount       Int            @default(0)
+  lastFollowUpAt      DateTime?
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
 
@@ -258,4 +262,13 @@ model EmailSetting {
   id              String   @id @default("default")
   defaultProvider String?
   updatedAt       DateTime @updatedAt
+}
+
+model TelegramSetting {
+  id        String   @id @default("default")
+  botToken  String
+  chatId    String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
