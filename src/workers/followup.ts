@@ -1,9 +1,10 @@
 /**
  * Auto Follow-up Worker
- * Sends follow-up emails after 3 days if no response
+ * Sends follow-up emails after 3 days if no response.
  */
 
 import { createWorker } from "../lib/queue/index.js";
+import { QUEUE_NAMES, emailFollowUpQueue } from "./queues.js";
 import { sendTelegramNotification, getDefaultTelegramConfig } from "../lib/notifications/telegram.js";
 import { prisma } from "../lib/db/index.js";
 
@@ -16,7 +17,7 @@ const MAX_FOLLOW_UPS = 2;
 
 export async function startFollowUpWorker() {
   const followUpWorker = createWorker<FollowUpJobData>(
-    "email-followup",
+    QUEUE_NAMES.EMAIL_FOLLOWUP,
     async (job) => {
       console.log(`[FollowUp] Checking for follow-up emails...`);
 
@@ -46,32 +47,36 @@ export async function startFollowUpWorker() {
 
       for (const email of emailsNeedingFollowUp) {
         try {
-          // Here you would call your email sending service
-          // For now, we'll just update the follow-up count and send notification
-          
+          const newFollowUpCount = (email.followUpCount || 0) + 1;
+
+          // TODO: Create follow-up outreach and send through existing pipeline
+          // For now, update the follow-up count and send notification
+
           await prisma.outreach.update({
             where: { id: email.id },
             data: {
-              followUpCount: (email.followUpCount || 0) + 1,
+              followUpCount: newFollowUpCount,
               lastFollowUpAt: new Date(),
             },
           });
 
           // Send Telegram notification
           const telegramConfig = getDefaultTelegramConfig();
-          if (telegramConfig.botToken && telegramConfig.chatId) {
-            await sendTelegramNotification(telegramConfig, {
+          if (telegramConfig) {
+            const notifResult = await sendTelegramNotification(telegramConfig, {
               type: "followup",
-              leadEmail: email.lead.email,
-              leadName: email.lead.name || undefined,
-              company: email.lead.company || undefined,
-              additionalInfo: `Follow-up #${(email.followUpCount || 0) + 1}`,
+              leadEmail: email.lead.email || "unknown",
+              company: email.lead.businessName || undefined,
+              additionalInfo: `Follow-up #${newFollowUpCount}`,
             });
+            if (!notifResult.success) {
+              console.warn(`[FollowUp] Telegram notification failed for ${email.lead.email}: ${notifResult.error}`);
+            }
           }
 
-          console.log(`[FollowUp] Sent follow-up to ${email.lead.email}`);
+          console.log(`[FollowUp] Processed follow-up #${newFollowUpCount} to ${email.lead.email}`);
         } catch (error) {
-          console.error(`[FollowUp] Failed to send follow-up to ${email.lead.email}:`, error);
+          console.error(`[FollowUp] Failed to process follow-up for ${email.lead.email}:`, error);
         }
       }
 
@@ -91,22 +96,11 @@ export async function startFollowUpWorker() {
 }
 
 /**
- * Check if a lead should receive a follow-up
+ * Set up the repeatable follow-up job (call once on server boot).
  */
-export function shouldSendFollowUp(outreach: {
-  sentAt: Date | null;
-  openedAt: Date | null;
-  repliedAt: Date | null;
-  followUpCount: number | null;
-}): boolean {
-  if (!outreach.sentAt) return false;
-  if (outreach.openedAt || outreach.repliedAt) return false;
-  
-  const daysSinceSent = Math.floor(
-    (Date.now() - outreach.sentAt.getTime()) / (1000 * 60 * 60 * 24)
-  );
-  
-  const currentFollowUps = outreach.followUpCount || 0;
-  
-  return daysSinceSent >= FOLLOW_UP_DELAY_DAYS && currentFollowUps < MAX_FOLLOW_UPS;
+export async function setupFollowUpCron() {
+  await emailFollowUpQueue.add("check-followups", { checkFollowUps: true }, {
+    repeat: { every: 300_000 },
+  });
+  console.log("[FollowUp] Repeatable job configured (every 5m)");
 }

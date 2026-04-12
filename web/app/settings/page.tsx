@@ -108,7 +108,7 @@ export default function SettingsPage() {
   const [telegramSaving, setTelegramSaving] = useState(false);
   const [telegramTesting, setTelegramTesting] = useState(false);
   const [telegramTestResult, setTelegramTestResult] = useState<{ success: boolean; error?: string } | null>(null);
-  const [telegramSettings, setTelegramSettings] = useState<{ botToken: string; chatId: string; isActive: boolean } | null>(null);
+  const [telegramSettings, setTelegramSettings] = useState<{ isConfigured: boolean; chatId: string; isActive: boolean } | null>(null);
 
   // Email provider state
   const [providerStatus, setProviderStatus] = useState<EmailProviderStatus | null>(null);

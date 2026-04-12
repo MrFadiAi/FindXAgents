@@ -1796,18 +1796,23 @@ export function registerRoutes(app: FastifyInstance) {
 
   // GET /api/telegram/settings - get telegram settings
   app.get("/api/telegram/settings", async (_req, reply) => {
-    const settings = await prisma.telegramSetting.findUnique({
-      where: { id: "default" },
-    });
-    return reply.send({
-      settings: settings
-        ? {
-            botToken: settings.botToken ? `${settings.botToken.slice(0, 8)}${"*".repeat(8)}` : null,
-            chatId: settings.chatId,
-            isActive: settings.isActive,
-          }
-        : null,
-    });
+    try {
+      const settings = await prisma.telegramSetting.findUnique({
+        where: { id: "default" },
+      });
+      return reply.send({
+        settings: settings
+          ? {
+              isConfigured: !!settings.botToken,
+              chatId: settings.chatId,
+              isActive: settings.isActive,
+            }
+          : null,
+      });
+    } catch (error) {
+      console.error("[Telegram] Failed to load settings:", error);
+      return reply.status(500).send({ error: "Failed to load settings" });
+    }
   });
 
   const telegramSettingsSchema = z.object({
@@ -1817,61 +1822,89 @@ export function registerRoutes(app: FastifyInstance) {
 
   // POST /api/telegram/settings - save telegram settings
   app.post("/api/telegram/settings", async (req, reply) => {
-    const data = telegramSettingsSchema.parse(req.body);
-    const settings = await prisma.telegramSetting.upsert({
-      where: { id: "default" },
-      create: {
-        id: "default",
-        botToken: data.botToken,
-        chatId: data.chatId,
-      },
-      update: {
-        botToken: data.botToken,
-        chatId: data.chatId,
-      },
-    });
-    return reply.send({
-      success: true,
-      settings: {
-        botToken: `${settings.botToken.slice(0, 8)}${"*".repeat(8)}`,
-        chatId: settings.chatId,
-        isActive: settings.isActive,
-      },
-    });
+    const parsed = telegramSettingsSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: "Validation failed",
+        details: parsed.error.flatten(),
+      });
+    }
+    try {
+      const data = parsed.data;
+      const settings = await prisma.telegramSetting.upsert({
+        where: { id: "default" },
+        create: {
+          id: "default",
+          botToken: data.botToken,
+          chatId: data.chatId,
+        },
+        update: {
+          botToken: data.botToken,
+          chatId: data.chatId,
+        },
+      });
+      return reply.send({
+        success: true,
+        settings: {
+          isConfigured: true,
+          chatId: settings.chatId,
+          isActive: settings.isActive,
+        },
+      });
+    } catch (error) {
+      console.error("[Telegram] Failed to save settings:", error);
+      return reply.status(500).send({ error: "Failed to save settings" });
+    }
   });
 
   // POST /api/telegram/test - test telegram connection
   app.post("/api/telegram/test", async (req, reply) => {
-    const data = telegramSettingsSchema.parse(req.body);
-    const { sendTelegramNotification } = await import("../lib/notifications/telegram.js");
-    const result = await sendTelegramNotification(
-      { botToken: data.botToken, chatId: data.chatId },
-      {
-        type: "sent",
-        leadEmail: "test@example.com",
-        leadName: "Test User",
-        company: "Test Company",
-        additionalInfo: "This is a test notification from FindX",
-      }
-    );
-    return reply.send(result);
+    const parsed = telegramSettingsSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: "Validation failed",
+        details: parsed.error.flatten(),
+      });
+    }
+    try {
+      const data = parsed.data;
+      const { sendTelegramNotification } = await import("../lib/notifications/telegram.js");
+      const result = await sendTelegramNotification(
+        { botToken: data.botToken, chatId: data.chatId },
+        {
+          type: "sent",
+          leadEmail: "test@example.com",
+          leadName: "Test User",
+          company: "Test Company",
+          additionalInfo: "This is a test notification from FindX",
+        }
+      );
+      return reply.send(result);
+    } catch (error) {
+      console.error("[Telegram] Test failed:", error);
+      return reply.status(500).send({ success: false, error: "Test failed" });
+    }
   });
 
   // DELETE /api/telegram/settings - delete telegram settings
   app.delete("/api/telegram/settings", async (_req, reply) => {
-    try {
-      await prisma.telegramSetting.delete({ where: { id: "default" } });
-      return reply.send({ deleted: true });
-    } catch {
+    const result = await prisma.telegramSetting.deleteMany({
+      where: { id: "default" },
+    });
+    if (result.count === 0) {
       return reply.status(404).send({ error: "Settings not found" });
     }
+    return reply.send({ deleted: true });
   });
 
   // --- Email Scheduling ---
 
   const scheduleEmailSchema = z.object({
     outreachId: z.string().min(1),
-    sendAt: z.string().transform((v) => new Date(v)),
+    sendAt: z.string().transform((v) => new Date(v)).refine(
+      (d) => !isNaN(d.getTime()) && d > new Date(),
+      { message: "sendAt must be a valid future date" }
+    ),
   });
 
   // POST /api/outreaches/:id/schedule - schedule an email
@@ -1894,11 +1927,16 @@ export function registerRoutes(app: FastifyInstance) {
       return reply.status(404).send({ error: "Outreach not found" });
     }
 
+    const allowedStatuses = ["draft", "pending_approval", "approved"];
+    if (!allowedStatuses.includes(outreach.status)) {
+      return reply.status(400).send({ error: `Cannot schedule outreach with status "${outreach.status}"` });
+    }
+
     const updated = await prisma.outreach.update({
       where: { id },
       data: {
         scheduledAt: parsed.data.sendAt,
-        status: "approved",
+        status: "scheduled" as const,
       },
     });
 
@@ -1914,11 +1952,15 @@ export function registerRoutes(app: FastifyInstance) {
       return reply.status(404).send({ error: "Outreach not found" });
     }
 
+    if (outreach.status !== "scheduled") {
+      return reply.status(400).send({ error: "Outreach is not scheduled" });
+    }
+
     const updated = await prisma.outreach.update({
       where: { id },
       data: {
         scheduledAt: null,
-        status: "draft",
+        status: "approved",
       },
     });
 
