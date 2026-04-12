@@ -7,7 +7,7 @@ import { createWorker } from "../lib/queue/index.js";
 import { QUEUE_NAMES } from "./queues.js";
 import { sendTelegramNotification, getDefaultTelegramConfig } from "../lib/notifications/telegram.js";
 import { sendOutreach } from "../modules/outreach/outreach.service.js";
-import { prisma } from "../lib/db/index.js";
+import { prisma } from "../lib/db/client.js";
 
 export interface FollowUpJobData {
   checkFollowUps: boolean;
@@ -79,17 +79,27 @@ export async function startFollowUpWorker() {
           // Send Telegram notification
           const telegramConfig = getDefaultTelegramConfig();
           if (telegramConfig) {
-            await sendTelegramNotification(telegramConfig, {
+            const notifResult = await sendTelegramNotification(telegramConfig, {
               type: "followup",
               leadEmail: email.lead.email || "unknown",
               company: email.lead.businessName || undefined,
               additionalInfo: `Follow-up #${newFollowUpCount} — ${result.sent ? "sent" : "failed"}`,
             });
+            if (!notifResult.success) {
+              console.warn(`[FollowUp] Telegram notification failed for ${email.lead.email}: ${notifResult.error}`);
+            }
           }
 
           console.log(`[FollowUp] ${result.sent ? "Sent" : "Failed"} follow-up #${newFollowUpCount} to ${email.lead.email}`);
         } catch (error) {
           console.error(`[FollowUp] Failed to send follow-up to ${email.lead.email}:`, error);
+          // Mark failed follow-ups so they don't become orphans
+          if (followUp) {
+            await prisma.outreach.update({
+              where: { id: followUp.id },
+              data: { status: "failed" },
+            }).catch(() => {});
+          }
         }
       }
 

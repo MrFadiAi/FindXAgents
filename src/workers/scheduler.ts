@@ -7,7 +7,7 @@ import { createWorker } from "../lib/queue/index.js";
 import { QUEUE_NAMES, outreachSendQueue } from "./queues.js";
 import { sendTelegramNotification, getDefaultTelegramConfig } from "../lib/notifications/telegram.js";
 import { sendOutreach } from "../modules/outreach/outreach.service.js";
-import { prisma } from "../lib/db/index.js";
+import { prisma } from "../lib/db/client.js";
 
 export interface SchedulerJobData {
   checkScheduledEmails: boolean;
@@ -51,12 +51,15 @@ export async function startSchedulerWorker() {
           // Send Telegram notification
           const telegramConfig = getDefaultTelegramConfig();
           if (telegramConfig) {
-            await sendTelegramNotification(telegramConfig, {
+            const notifResult = await sendTelegramNotification(telegramConfig, {
               type: "scheduled",
               leadEmail: email.lead.email || "unknown",
               company: email.lead.businessName || undefined,
               additionalInfo: result.sent ? undefined : `Send failed: ${result.reason}`,
             });
+            if (!notifResult.success) {
+              console.warn(`[Scheduler] Telegram notification failed for ${email.lead.email}: ${notifResult.error}`);
+            }
           }
 
           console.log(`[Scheduler] ${result.sent ? "Sent" : "Failed"} scheduled email to ${email.lead.email}`);

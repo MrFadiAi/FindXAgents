@@ -424,8 +424,13 @@ export default function SettingsPage() {
         setTelegramSettings(data.settings);
         setTelegramForm({ botToken: "", chatId: data.settings.chatId });
       }
-    } catch {
-      // ignore
+    } catch (err) {
+      // Non-critical: settings page works without loaded Telegram config
+      console.error("Failed to load Telegram settings:", err);
+      setTelegramTestResult({
+        success: false,
+        error: "Failed to load settings. Please refresh the page.",
+      });
     }
   }
 

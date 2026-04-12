@@ -57,18 +57,21 @@ Configurable 3-phase agent pipeline: Research → Analysis → Outreach. Agents 
 4. **Pipeline** (`src/modules/pipeline/`): Lead stage definitions (discovered → analyzing → analyzed → contacting → responded → qualified → won/lost)
 
 ### Job Processing
-BullMQ queues backed by Redis. Six named queues in `src/workers/queues.ts`:
+BullMQ queues backed by Redis. Nine named queues in `src/workers/queues.ts`:
 - `discovery:kvk`, `discovery:google` — lead scraping jobs
 - `analysis:website` — Lighthouse + AI analysis
 - `outreach:generate`, `outreach:send`, `outreach:track` — email lifecycle
+- `email-scheduler` — checks for and sends scheduled emails at the right time
+- `email-followup` — sends follow-up emails after 3 days if no response
 
-Workers in `src/workers/` (discovery.ts, analysis.ts, outreach.ts). Most API routes support both `sync: true` (immediate) and background (queued) modes.
+Workers in `src/workers/` (discovery.ts, analysis.ts, outreach.ts, scheduler.ts, followup.ts). Most API routes support both `sync: true` (immediate) and background (queued) modes.
 
 ### Key Libraries
 - **Database**: Prisma with PostgreSQL (`src/lib/db/client.ts`)
 - **Queue**: BullMQ with Redis (`src/lib/queue/index.ts`) — use `createQueue()` / `createWorker()`
 - **AI**: OpenAI-compatible client pointed at GLM (`src/lib/ai/client.ts`, `src/modules/outreach/generator.ts`) — configured via `GLM_API_KEY`, `GLM_BASE_URL`, `GLM_MODEL` env vars
 - **Email**: Resend (`src/lib/email/client.ts`)
+- **Notifications**: Telegram (`src/lib/notifications/telegram.ts`) — sends event notifications via Telegram Bot API
 - **Web scraping**: Cheerio + Playwright (for tech detection)
 - **Browser**: Lightpanda (CDP, low RAM JS rendering) via `src/lib/browser/client.ts` — falls back to Playwright Chromium. Used for `scrape_page(renderJs:true)` and `detect_tech(renderJs:true)`. Lighthouse and screenshots always use full Chromium.
 
@@ -88,12 +91,15 @@ All routes in `src/routes/index.ts` on Fastify. All endpoints under `/api/`:
 - `GET /api/agents/:id/skills`, `POST/PATCH/DELETE` — agent skill CRUD
 - `GET /api/agents/logs`, `GET /api/agents/runs/:id/logs` — agent log monitoring
 - `POST /api/agents/run` — trigger agent pipeline, `GET /api/agents/runs` — list runs
+- `GET /api/telegram/settings`, `POST /api/telegram/settings`, `DELETE /api/telegram/settings` — Telegram notification settings
+- `POST /api/telegram/test` — test Telegram connection
+- `POST /api/outreaches/:id/schedule`, `DELETE /api/outreaches/:id/schedule` — schedule/cancel email sending
 
 ### Database Schema
-PostgreSQL via Prisma (`prisma/schema.prisma`). Core models: `Lead`, `Analysis`, `Outreach`, `PipelineStage`, `Agent`, `AgentSkill`, `AgentLog`, `AgentPipelineRun`. Enums: `LeadStatus`, `OutreachStatus`.
+PostgreSQL via Prisma (`prisma/schema.prisma`). Core models: `Lead`, `Analysis`, `Outreach`, `PipelineStage`, `Agent`, `AgentSkill`, `AgentLog`, `AgentPipelineRun`, `EmailSetting`, `TelegramSetting`. Enums: `LeadStatus`, `OutreachStatus` (includes `scheduled`).
 
 ### Frontend (`web/`)
-Next.js App Router with pages: Dashboard (`/`), Agents (`/agents` — tabbed pipeline runner + agent cards), Agent Detail (`/agents/[name]` — editable identity/soul/tools + settings + skills), Discovery (`/discover`), Settings (`/settings`). Key components: `AgentMonitor` (live log viewer with polling), `KanbanBoard`, lead list/detail, analysis panel, outreach panel.
+Next.js App Router with pages: Dashboard (`/`), Agents (`/agents` — tabbed pipeline runner + agent cards), Agent Detail (`/agents/[name]` — editable identity/soul/tools + settings + skills), Discovery (`/discover`), Settings (`/settings` — tabbed: AI Providers, Email, Notifications, Data). Key components: `AgentMonitor` (live log viewer with polling), `KanbanBoard`, lead list/detail, analysis panel, outreach panel.
 
 ## Environment Variables
 
@@ -110,6 +116,9 @@ Required for full operation:
 - `PORT` — API server port (default: 3001)
 - `LIGHTPANDA_URL` — Lightpanda CDP endpoint (default: `http://localhost:9222`, optional — tools fall back to Chromium)
 - `SEARXNG_URL` — SearXNG meta search endpoint (default: `http://localhost:8080`, optional — included in docker-compose)
+- `TELEGRAM_BOT_TOKEN` — Telegram bot token for notifications (optional — feature disabled without it)
+- `TELEGRAM_CHAT_ID` — Telegram chat ID for notifications (optional — feature disabled without it)
+- `APP_TIMEZONE` — Timezone for timestamps (default: `Europe/Amsterdam`, optional)
 
 ## Code Conventions
 
