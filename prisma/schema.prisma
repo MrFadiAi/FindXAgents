@@ -119,6 +119,7 @@ model Outreach {
 
   @@index([leadId])
   @@index([status])
+  @@index([status, scheduledAt])
 }
 
 model PipelineStage {

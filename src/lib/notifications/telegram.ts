@@ -38,6 +38,16 @@ const TITLE_MAP = {
 };
 
 /**
+ * Escape Telegram MarkdownV2 special characters to prevent injection.
+ * Telegram Markdown uses: _ * [ ] ( ) ~ ` > # + - = | { } . !
+ */
+function escapeMarkdown(text: string): string {
+  return text.replace(/([_*\[\]()~`>#+\-=|{}.!])/g, '\\$1');
+}
+
+const APP_TIMEZONE = process.env.APP_TIMEZONE || 'Europe/Amsterdam';
+
+/**
  * Send a notification to Telegram
  */
 export async function sendTelegramNotification(
@@ -58,9 +68,9 @@ export async function sendTelegramNotification(
   const message = `
 ${emoji} *${title}*
 
-📧 *Email:* ${leadEmail}
-${leadName ? `👤 *Name:* ${leadName}\n` : ''}${company ? `🏢 *Company:* ${company}\n` : ''}${additionalInfo ? `📝 *Info:* ${additionalInfo}\n` : ''}
-🕐 *Time:* ${time.toLocaleString('en-US', { timeZone: 'Africa/Casablanca' })}
+📧 *Email:* ${escapeMarkdown(leadEmail)}
+${leadName ? `👤 *Name:* ${escapeMarkdown(leadName)}\n` : ''}${company ? `🏢 *Company:* ${escapeMarkdown(company)}\n` : ''}${additionalInfo ? `📝 *Info:* ${escapeMarkdown(additionalInfo)}\n` : ''}
+🕐 *Time:* ${time.toLocaleString('en-US', { timeZone: APP_TIMEZONE })}
 `.trim();
 
   try {
@@ -110,9 +120,9 @@ export async function testTelegramConnection(
 /**
  * Get default Telegram configuration from environment
  */
-export function getDefaultTelegramConfig(): TelegramConfig {
-  return {
-    botToken: process.env.TELEGRAM_BOT_TOKEN || '',
-    chatId: process.env.TELEGRAM_CHAT_ID || '',
-  };
+export function getDefaultTelegramConfig(): TelegramConfig | null {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!botToken || !chatId) return null;
+  return { botToken, chatId };
 }

@@ -1802,7 +1802,7 @@ export function registerRoutes(app: FastifyInstance) {
     return reply.send({
       settings: settings
         ? {
-            botToken: settings.botToken ? `${settings.botToken.slice(0, 8)}${"*".repeat(8)}` : null,
+            isConfigured: !!settings.botToken,
             chatId: settings.chatId,
             isActive: settings.isActive,
           }
@@ -1833,7 +1833,7 @@ export function registerRoutes(app: FastifyInstance) {
     return reply.send({
       success: true,
       settings: {
-        botToken: `${settings.botToken.slice(0, 8)}${"*".repeat(8)}`,
+        isConfigured: true,
         chatId: settings.chatId,
         isActive: settings.isActive,
       },
@@ -1871,7 +1871,10 @@ export function registerRoutes(app: FastifyInstance) {
 
   const scheduleEmailSchema = z.object({
     outreachId: z.string().min(1),
-    sendAt: z.string().transform((v) => new Date(v)),
+    sendAt: z.string().transform((v) => new Date(v)).refine(
+      (d) => !isNaN(d.getTime()) && d > new Date(),
+      { message: "sendAt must be a valid future date" }
+    ),
   });
 
   // POST /api/outreaches/:id/schedule - schedule an email
@@ -1894,11 +1897,17 @@ export function registerRoutes(app: FastifyInstance) {
       return reply.status(404).send({ error: "Outreach not found" });
     }
 
+    // Only allow scheduling from allowed statuses
+    const allowedStatuses = ["draft", "pending_approval", "approved"];
+    if (!allowedStatuses.includes(outreach.status)) {
+      return reply.status(400).send({ error: `Cannot schedule outreach with status "${outreach.status}"` });
+    }
+
     const updated = await prisma.outreach.update({
       where: { id },
       data: {
         scheduledAt: parsed.data.sendAt,
-        status: "approved",
+        status: "scheduled" as const,
       },
     });
 
@@ -1914,11 +1923,16 @@ export function registerRoutes(app: FastifyInstance) {
       return reply.status(404).send({ error: "Outreach not found" });
     }
 
+    if (outreach.status !== "scheduled") {
+      return reply.status(400).send({ error: "Outreach is not scheduled" });
+    }
+
+    // Revert to approved (the status before scheduling)
     const updated = await prisma.outreach.update({
       where: { id },
       data: {
         scheduledAt: null,
-        status: "draft",
+        status: "approved",
       },
     });
 
