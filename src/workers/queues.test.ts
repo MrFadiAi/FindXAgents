@@ -21,6 +21,8 @@ import {
   outreachSendQueue,
   outreachTrackQueue,
   agentPipelineQueue,
+  emailSchedulerQueue,
+  emailFollowUpQueue,
   QueueName,
 } from './queues.js';
 
@@ -38,14 +40,15 @@ describe('queues.ts', () => {
       expect(QUEUE_NAMES.OUTREACH_SEND).toBe('outreach-send');
       expect(QUEUE_NAMES.OUTREACH_TRACK).toBe('outreach-track');
       expect(QUEUE_NAMES.AGENT_PIPELINE).toBe('agent-pipeline');
+      expect(QUEUE_NAMES.EMAIL_SCHEDULER).toBe('email-scheduler');
+      expect(QUEUE_NAMES.EMAIL_FOLLOWUP).toBe('email-followup');
     });
 
-    it('should contain exactly 7 queue definitions', () => {
-      expect(Object.keys(QUEUE_NAMES).length).toBe(7);
+    it('should contain exactly 9 queue definitions', () => {
+      expect(Object.keys(QUEUE_NAMES).length).toBe(9);
     });
 
     it('should have keys matching their values in a consistent format', () => {
-      // Validates that the transformation from KEY to value is consistently dashed-lowercase
       Object.entries(QUEUE_NAMES).forEach(([key, value]) => {
         expect(value).toMatch(/^[a-z]+-[a-z]+$/);
       });
@@ -62,6 +65,8 @@ describe('queues.ts', () => {
         'outreach-send',
         'outreach-track',
         'agent-pipeline',
+        'email-scheduler',
+        'email-followup',
       ];
 
       validNames.forEach((name) => {
@@ -72,18 +77,8 @@ describe('queues.ts', () => {
   });
 
   describe('Queue Initialization', () => {
-    it('should call createQueue exactly 7 times', () => {
-      // Re-import or trigger the module evaluation again if needed. 
-      // Because vi.mock is hoisted, the imports at the top already triggered the mock.
-      // However, because we cleared mocks in beforeEach, we need to ensure the module was loaded.
-      // Since ESM handles this, the initial import called it 7 times.
-      // We can test the total invocations by checking the mock.
-      // Note: If dynamic re-evaluation is strictly needed, vi.isolateModules would be used.
-      // Here, we verify the static initialization.
-      
-      // The import triggered this before beforeEach cleared it for the *current* test,
-      // so we assert the mock calls directly after a fresh module load context.
-      expect(createQueue).toHaveBeenCalledTimes(7);
+    it('should call createQueue exactly 9 times', () => {
+      expect(createQueue).toHaveBeenCalledTimes(9);
     });
 
     it('should initialize the discoveryKvkQueue with correct name', () => {
@@ -119,6 +114,16 @@ describe('queues.ts', () => {
     it('should initialize the agentPipelineQueue with correct name', () => {
       expect(createQueue).toHaveBeenCalledWith('agent-pipeline');
       expect(agentPipelineQueue.name).toBe('agent-pipeline');
+    });
+
+    it('should initialize the emailSchedulerQueue with correct name', () => {
+      expect(createQueue).toHaveBeenCalledWith('email-scheduler');
+      expect(emailSchedulerQueue.name).toBe('email-scheduler');
+    });
+
+    it('should initialize the emailFollowUpQueue with correct name', () => {
+      expect(createQueue).toHaveBeenCalledWith('email-followup');
+      expect(emailFollowUpQueue.name).toBe('email-followup');
     });
   });
 });

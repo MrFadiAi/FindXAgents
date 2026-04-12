@@ -419,13 +419,14 @@ export default function SettingsPage() {
   async function loadTelegramSettings() {
     try {
       const res = await fetch("/api/telegram/settings");
+      if (!res.ok) throw new Error("Failed to load Telegram settings");
       const data = await res.json();
       if (data.settings) {
         setTelegramSettings(data.settings);
         setTelegramForm({ botToken: "", chatId: data.settings.chatId });
       }
-    } catch {
-      // ignore
+    } catch (err) {
+      console.error("Failed to load Telegram settings:", err);
     }
   }
 
@@ -439,6 +440,9 @@ export default function SettingsPage() {
         body: JSON.stringify(telegramForm),
       });
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || data.details || `Server error (${res.status})`);
+      }
       if (data.success) {
         setTelegramSettings(data.settings);
         setTelegramForm({ botToken: "", chatId: data.settings.chatId });
@@ -462,7 +466,11 @@ export default function SettingsPage() {
         body: JSON.stringify(telegramForm),
       });
       const data = await res.json();
-      setTelegramTestResult(data);
+      if (!res.ok) {
+        setTelegramTestResult({ success: false, error: data.error || data.details || `Server error (${res.status})` });
+      } else {
+        setTelegramTestResult(data);
+      }
     } catch (err) {
       setTelegramTestResult({ success: false, error: err instanceof Error ? err.message : "Test failed" });
     } finally {

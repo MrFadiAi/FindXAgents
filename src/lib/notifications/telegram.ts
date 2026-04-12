@@ -68,7 +68,7 @@ ${emoji} *${title}*
 
 📧 *Email:* ${escapeMarkdown(leadEmail)}
 ${leadName ? `👤 *Name:* ${escapeMarkdown(leadName)}\n` : ''}${company ? `🏢 *Company:* ${escapeMarkdown(company)}\n` : ''}${additionalInfo ? `📝 *Info:* ${escapeMarkdown(additionalInfo)}\n` : ''}
-🕐 *Time:* ${time.toLocaleString('en-US', { timeZone: 'Africa/Casablanca' })}
+🕐 *Time:* ${time.toLocaleString('en-US', { timeZone: 'Europe/Amsterdam' })}
 `.trim();
 
   try {
@@ -84,6 +84,10 @@ ${leadName ? `👤 *Name:* ${escapeMarkdown(leadName)}\n` : ''}${company ? `🏢
         }),
       }
     );
+
+    if (!response.ok) {
+      return { success: false, error: `Telegram API error: HTTP ${response.status}` };
+    }
 
     const data = await response.json();
 

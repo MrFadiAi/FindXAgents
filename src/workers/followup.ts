@@ -46,6 +46,9 @@ export async function startFollowUpWorker() {
 
       console.log(`[FollowUp] Found ${emailsNeedingFollowUp.length} emails needing follow-up`);
 
+      let succeeded = 0;
+      let failed = 0;
+
       for (const email of emailsNeedingFollowUp) {
         try {
           if (!email.lead.email) {
@@ -77,13 +80,19 @@ export async function startFollowUpWorker() {
             }).catch((err) => console.error("[FollowUp] Telegram notification failed:", err));
           }
 
+          succeeded++;
           console.log(`[FollowUp] Sent follow-up #${newFollowUpCount} to ${email.lead.email}`);
         } catch (error) {
+          failed++;
           console.error(`[FollowUp] Failed to send follow-up to ${email.lead.email}:`, error);
         }
       }
 
-      return { processed: emailsNeedingFollowUp.length };
+      if (failed > 0) {
+        throw new Error(`Failed to send ${failed}/${emailsNeedingFollowUp.length} follow-up emails`);
+      }
+
+      return { processed: succeeded };
     }
   );
 

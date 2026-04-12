@@ -1817,54 +1817,80 @@ export function registerRoutes(app: FastifyInstance) {
 
   // POST /api/telegram/settings - save telegram settings
   app.post("/api/telegram/settings", async (req, reply) => {
-    const data = telegramSettingsSchema.parse(req.body);
-    const settings = await prisma.telegramSetting.upsert({
-      where: { id: "default" },
-      create: {
-        id: "default",
-        botToken: data.botToken,
-        chatId: data.chatId,
-      },
-      update: {
-        botToken: data.botToken,
-        chatId: data.chatId,
-      },
-    });
-    return reply.send({
-      success: true,
-      settings: {
-        botToken: `${settings.botToken.slice(0, 8)}${"*".repeat(8)}`,
-        chatId: settings.chatId,
-        isActive: settings.isActive,
-      },
-    });
+    const parsed = telegramSettingsSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: "Validation failed",
+        details: parsed.error.flatten(),
+      });
+    }
+    try {
+      const settings = await prisma.telegramSetting.upsert({
+        where: { id: "default" },
+        create: {
+          id: "default",
+          botToken: parsed.data.botToken,
+          chatId: parsed.data.chatId,
+        },
+        update: {
+          botToken: parsed.data.botToken,
+          chatId: parsed.data.chatId,
+        },
+      });
+      return reply.send({
+        success: true,
+        settings: {
+          botToken: `${settings.botToken.slice(0, 8)}${"*".repeat(8)}`,
+          chatId: settings.chatId,
+          isActive: settings.isActive,
+        },
+      });
+    } catch (err) {
+      return reply.status(500).send({
+        error: "Failed to save settings",
+        details: err instanceof Error ? err.message : String(err),
+      });
+    }
   });
 
   // POST /api/telegram/test - test telegram connection
   app.post("/api/telegram/test", async (req, reply) => {
-    const data = telegramSettingsSchema.parse(req.body);
-    const { sendTelegramNotification } = await import("../lib/notifications/telegram.js");
-    const result = await sendTelegramNotification(
-      { botToken: data.botToken, chatId: data.chatId },
-      {
-        type: "sent",
-        leadEmail: "test@example.com",
-        leadName: "Test User",
-        company: "Test Company",
-        additionalInfo: "This is a test notification from FindX",
-      }
-    );
-    return reply.send(result);
+    const parsed = telegramSettingsSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: "Validation failed",
+        details: parsed.error.flatten(),
+      });
+    }
+    try {
+      const { sendTelegramNotification } = await import("../lib/notifications/telegram.js");
+      const result = await sendTelegramNotification(
+        { botToken: parsed.data.botToken, chatId: parsed.data.chatId },
+        {
+          type: "sent",
+          leadEmail: "test@example.com",
+          leadName: "Test User",
+          company: "Test Company",
+          additionalInfo: "This is a test notification from FindX",
+        }
+      );
+      return reply.send(result);
+    } catch (err) {
+      return reply.status(500).send({
+        error: "Test failed",
+        details: err instanceof Error ? err.message : String(err),
+      });
+    }
   });
 
   // DELETE /api/telegram/settings - delete telegram settings
   app.delete("/api/telegram/settings", async (_req, reply) => {
-    try {
-      await prisma.telegramSetting.delete({ where: { id: "default" } });
-      return reply.send({ deleted: true });
-    } catch {
+    const settings = await prisma.telegramSetting.findUnique({ where: { id: "default" } });
+    if (!settings) {
       return reply.status(404).send({ error: "Settings not found" });
     }
+    await prisma.telegramSetting.delete({ where: { id: "default" } });
+    return reply.send({ deleted: true });
   });
 
   // --- Email Scheduling ---

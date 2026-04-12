@@ -37,6 +37,9 @@ export async function startSchedulerWorker() {
 
       console.log(`[Scheduler] Found ${scheduledEmails.length} emails to send`);
 
+      let succeeded = 0;
+      let failed = 0;
+
       for (const email of scheduledEmails) {
         try {
           if (!email.lead.email) {
@@ -65,13 +68,19 @@ export async function startSchedulerWorker() {
             }).catch((err) => console.error("[Scheduler] Telegram notification failed:", err));
           }
 
+          succeeded++;
           console.log(`[Scheduler] Sent scheduled email to ${email.lead.email}`);
         } catch (error) {
+          failed++;
           console.error(`[Scheduler] Failed to send email to ${email.lead.email}:`, error);
         }
       }
 
-      return { processed: scheduledEmails.length };
+      if (failed > 0) {
+        throw new Error(`Failed to send ${failed}/${scheduledEmails.length} scheduled emails`);
+      }
+
+      return { processed: succeeded };
     }
   );
 
@@ -111,6 +120,7 @@ export async function scheduleEmail(outreachId: string, sendAt: Date): Promise<{
     console.log(`[Scheduler] Scheduled email to ${outreach.lead.email} for ${sendAt}`);
     return { success: true };
   } catch (error) {
+    console.error("[Scheduler] Failed to schedule email:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
