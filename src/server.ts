@@ -3,6 +3,9 @@ import cors from "@fastify/cors";
 import { prisma } from "./lib/db/client.js";
 import { registerRoutes } from "./routes/index.js";
 import { startAgentWorker } from "./workers/agent-worker.js";
+import { startSchedulerWorker } from "./workers/scheduler.js";
+import { startFollowUpWorker } from "./workers/followup.js";
+import { emailSchedulerQueue, emailFollowUpQueue } from "./workers/queues.js";
 
 const PORT = parseInt(process.env.PORT || "3001", 10);
 const HOST = process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1";
@@ -35,6 +38,18 @@ async function main() {
     // Start agent pipeline worker
     startAgentWorker();
     console.log("Agent pipeline worker started");
+
+    // Start scheduler and follow-up workers
+    startSchedulerWorker();
+    console.log("Email scheduler worker started");
+
+    startFollowUpWorker();
+    console.log("Email follow-up worker started");
+
+    // Enqueue periodic jobs (every 60 seconds)
+    await emailSchedulerQueue.add("check-scheduled", { checkScheduledEmails: true }, { repeat: { every: 60_000 } });
+    await emailFollowUpQueue.add("check-followups", { checkFollowUps: true }, { repeat: { every: 60_000 } });
+    console.log("Periodic scheduler/follow-up jobs enqueued");
   } catch (err) {
     app.log.error(err);
     process.exit(1);

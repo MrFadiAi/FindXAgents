@@ -1885,6 +1885,10 @@ export function registerRoutes(app: FastifyInstance) {
       });
     }
 
+    if (parsed.data.sendAt <= new Date()) {
+      return reply.status(400).send({ error: "Scheduled time must be in the future" });
+    }
+
     const outreach = await prisma.outreach.findUnique({
       where: { id },
       include: { lead: true },
@@ -1894,11 +1898,16 @@ export function registerRoutes(app: FastifyInstance) {
       return reply.status(404).send({ error: "Outreach not found" });
     }
 
+    // Only draft or approved emails can be scheduled
+    if (outreach.status !== "draft" && outreach.status !== "approved") {
+      return reply.status(400).send({ error: `Cannot schedule email with status "${outreach.status}"` });
+    }
+
     const updated = await prisma.outreach.update({
       where: { id },
       data: {
         scheduledAt: parsed.data.sendAt,
-        status: "approved",
+        status: "scheduled",
       },
     });
 
@@ -1912,6 +1921,10 @@ export function registerRoutes(app: FastifyInstance) {
     const outreach = await prisma.outreach.findUnique({ where: { id } });
     if (!outreach) {
       return reply.status(404).send({ error: "Outreach not found" });
+    }
+
+    if (outreach.status !== "scheduled") {
+      return reply.status(400).send({ error: "Only scheduled emails can be cancelled" });
     }
 
     const updated = await prisma.outreach.update({

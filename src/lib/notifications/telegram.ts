@@ -38,6 +38,14 @@ const TITLE_MAP = {
 };
 
 /**
+ * Escape Markdown special characters in user-provided text
+ * to prevent injection in Telegram Markdown messages
+ */
+function escapeMarkdown(text: string): string {
+  return text.replace(/([_*\[\]()~`>#+\-=|{}.!])/g, '\\$1');
+}
+
+/**
  * Send a notification to Telegram
  */
 export async function sendTelegramNotification(
@@ -58,8 +66,8 @@ export async function sendTelegramNotification(
   const message = `
 ${emoji} *${title}*
 
-📧 *Email:* ${leadEmail}
-${leadName ? `👤 *Name:* ${leadName}\n` : ''}${company ? `🏢 *Company:* ${company}\n` : ''}${additionalInfo ? `📝 *Info:* ${additionalInfo}\n` : ''}
+📧 *Email:* ${escapeMarkdown(leadEmail)}
+${leadName ? `👤 *Name:* ${escapeMarkdown(leadName)}\n` : ''}${company ? `🏢 *Company:* ${escapeMarkdown(company)}\n` : ''}${additionalInfo ? `📝 *Info:* ${escapeMarkdown(additionalInfo)}\n` : ''}
 🕐 *Time:* ${time.toLocaleString('en-US', { timeZone: 'Africa/Casablanca' })}
 `.trim();
 

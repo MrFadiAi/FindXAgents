@@ -6,7 +6,8 @@
 import { createWorker } from "../lib/queue/index.js";
 import { QUEUE_NAMES } from "./queues.js";
 import { sendTelegramNotification, getDefaultTelegramConfig } from "../lib/notifications/telegram.js";
-import { prisma } from "../lib/db/index.js";
+import { sendEmail } from "../lib/email/client.js";
+import { prisma } from "../lib/db/client.js";
 
 export interface SchedulerJobData {
   checkScheduledEmails: boolean;
@@ -14,7 +15,7 @@ export interface SchedulerJobData {
 
 export async function startSchedulerWorker() {
   const schedulerWorker = createWorker<SchedulerJobData>(
-    "email-scheduler",
+    QUEUE_NAMES.EMAIL_SCHEDULER,
     async (job) => {
       console.log(`[Scheduler] Checking for scheduled emails...`);
 
@@ -38,9 +39,13 @@ export async function startSchedulerWorker() {
 
       for (const email of scheduledEmails) {
         try {
-          // Here you would call your email sending service
-          // For now, we'll just update the status and send notification
-          
+          if (!email.lead.email) {
+            console.warn(`[Scheduler] Skipping email ${email.id}: lead has no email address`);
+            continue;
+          }
+
+          await sendEmail(email.lead.email, email.subject, email.body);
+
           await prisma.outreach.update({
             where: { id: email.id },
             data: {
@@ -49,15 +54,15 @@ export async function startSchedulerWorker() {
             },
           });
 
-          // Send Telegram notification
+          // Send Telegram notification (fire-and-forget)
           const telegramConfig = getDefaultTelegramConfig();
           if (telegramConfig.botToken && telegramConfig.chatId) {
-            await sendTelegramNotification(telegramConfig, {
+            sendTelegramNotification(telegramConfig, {
               type: "scheduled",
               leadEmail: email.lead.email,
-              leadName: email.lead.name || undefined,
-              company: email.lead.company || undefined,
-            });
+              leadName: email.lead.businessName || undefined,
+              company: email.lead.industry || undefined,
+            }).catch((err) => console.error("[Scheduler] Telegram notification failed:", err));
           }
 
           console.log(`[Scheduler] Sent scheduled email to ${email.lead.email}`);
@@ -70,7 +75,6 @@ export async function startSchedulerWorker() {
     }
   );
 
-  // Run every minute
   schedulerWorker.on("completed", (job) => {
     console.log(`[Scheduler] Job ${job.id} completed`);
   });
