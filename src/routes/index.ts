@@ -1791,4 +1791,137 @@ export function registerRoutes(app: FastifyInstance) {
   app.get("/api/ai/providers/defaults", async (_req, reply) => {
     return reply.send({ defaults: PROVIDER_DEFAULTS });
   });
+
+  // --- Telegram Notifications ---
+
+  // GET /api/telegram/settings - get telegram settings
+  app.get("/api/telegram/settings", async (_req, reply) => {
+    const settings = await prisma.telegramSetting.findUnique({
+      where: { id: "default" },
+    });
+    return reply.send({
+      settings: settings
+        ? {
+            botToken: settings.botToken ? `${settings.botToken.slice(0, 8)}${"*".repeat(8)}` : null,
+            chatId: settings.chatId,
+            isActive: settings.isActive,
+          }
+        : null,
+    });
+  });
+
+  const telegramSettingsSchema = z.object({
+    botToken: z.string().min(1),
+    chatId: z.string().min(1),
+  });
+
+  // POST /api/telegram/settings - save telegram settings
+  app.post("/api/telegram/settings", async (req, reply) => {
+    const data = telegramSettingsSchema.parse(req.body);
+    const settings = await prisma.telegramSetting.upsert({
+      where: { id: "default" },
+      create: {
+        id: "default",
+        botToken: data.botToken,
+        chatId: data.chatId,
+      },
+      update: {
+        botToken: data.botToken,
+        chatId: data.chatId,
+      },
+    });
+    return reply.send({
+      success: true,
+      settings: {
+        botToken: `${settings.botToken.slice(0, 8)}${"*".repeat(8)}`,
+        chatId: settings.chatId,
+        isActive: settings.isActive,
+      },
+    });
+  });
+
+  // POST /api/telegram/test - test telegram connection
+  app.post("/api/telegram/test", async (req, reply) => {
+    const data = telegramSettingsSchema.parse(req.body);
+    const { sendTelegramNotification } = await import("../lib/notifications/telegram.js");
+    const result = await sendTelegramNotification(
+      { botToken: data.botToken, chatId: data.chatId },
+      {
+        type: "sent",
+        leadEmail: "test@example.com",
+        leadName: "Test User",
+        company: "Test Company",
+        additionalInfo: "This is a test notification from FindX",
+      }
+    );
+    return reply.send(result);
+  });
+
+  // DELETE /api/telegram/settings - delete telegram settings
+  app.delete("/api/telegram/settings", async (_req, reply) => {
+    try {
+      await prisma.telegramSetting.delete({ where: { id: "default" } });
+      return reply.send({ deleted: true });
+    } catch {
+      return reply.status(404).send({ error: "Settings not found" });
+    }
+  });
+
+  // --- Email Scheduling ---
+
+  const scheduleEmailSchema = z.object({
+    outreachId: z.string().min(1),
+    sendAt: z.string().transform((v) => new Date(v)),
+  });
+
+  // POST /api/outreaches/:id/schedule - schedule an email
+  app.post("/api/outreaches/:id/schedule", async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const parsed = scheduleEmailSchema.safeParse({ outreachId: id, ...req.body });
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: "Validation failed",
+        details: parsed.error.flatten(),
+      });
+    }
+
+    const outreach = await prisma.outreach.findUnique({
+      where: { id },
+      include: { lead: true },
+    });
+
+    if (!outreach) {
+      return reply.status(404).send({ error: "Outreach not found" });
+    }
+
+    const updated = await prisma.outreach.update({
+      where: { id },
+      data: {
+        scheduledAt: parsed.data.sendAt,
+        status: "approved",
+      },
+    });
+
+    return reply.send({ success: true, outreach: updated });
+  });
+
+  // DELETE /api/outreaches/:id/schedule - cancel scheduled email
+  app.delete("/api/outreaches/:id/schedule", async (req, reply) => {
+    const { id } = req.params as { id: string };
+
+    const outreach = await prisma.outreach.findUnique({ where: { id } });
+    if (!outreach) {
+      return reply.status(404).send({ error: "Outreach not found" });
+    }
+
+    const updated = await prisma.outreach.update({
+      where: { id },
+      data: {
+        scheduledAt: null,
+        status: "draft",
+      },
+    });
+
+    return reply.send({ success: true, outreach: updated });
+  });
 }
