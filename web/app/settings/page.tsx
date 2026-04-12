@@ -14,6 +14,9 @@ import {
   X,
   ExternalLink,
   Settings2,
+  Bell,
+  Brain,
+  Database,
 } from "lucide-react";
 import {
   clearAllData,
@@ -41,6 +44,16 @@ import type {
   AiProviderDefaults,
   AiProviderType,
 } from "../../lib/types";
+
+// Tab types
+type SettingsTab = "ai" | "email" | "notifications" | "data";
+
+const TABS: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
+  { id: "ai", label: "AI Providers", icon: <Brain className="w-4 h-4" /> },
+  { id: "email", label: "Email", icon: <Mail className="w-4 h-4" /> },
+  { id: "notifications", label: "Notifications", icon: <Bell className="w-4 h-4" /> },
+  { id: "data", label: "Data", icon: <Database className="w-4 h-4" /> },
+];
 
 const PROVIDER_TYPES: { value: AiProviderType; label: string; icon: string }[] = [
   { value: "glm", label: "GLM (ZhipuAI)", icon: "🧠" },
@@ -86,6 +99,16 @@ export default function SettingsPage() {
     };
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Active tab
+  const [activeTab, setActiveTab] = useState<SettingsTab>("ai");
+
+  // Telegram state
+  const [telegramForm, setTelegramForm] = useState({ botToken: "", chatId: "" });
+  const [telegramSaving, setTelegramSaving] = useState(false);
+  const [telegramTesting, setTelegramTesting] = useState(false);
+  const [telegramTestResult, setTelegramTestResult] = useState<{ success: boolean; error?: string } | null>(null);
+  const [telegramSettings, setTelegramSettings] = useState<{ botToken: string; chatId: string; isActive: boolean } | null>(null);
 
   // Email provider state
   const [providerStatus, setProviderStatus] = useState<EmailProviderStatus | null>(null);
@@ -392,6 +415,66 @@ export default function SettingsPage() {
 
   const currentDefaults = aiDefaults[form.providerType];
 
+  // Telegram handlers
+  async function loadTelegramSettings() {
+    try {
+      const res = await fetch("/api/telegram/settings");
+      const data = await res.json();
+      if (data.settings) {
+        setTelegramSettings(data.settings);
+        setTelegramForm({ botToken: "", chatId: data.settings.chatId });
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  async function handleSaveTelegram() {
+    setTelegramSaving(true);
+    setTelegramTestResult(null);
+    try {
+      const res = await fetch("/api/telegram/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(telegramForm),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTelegramSettings(data.settings);
+        setTelegramForm({ botToken: "", chatId: data.settings.chatId });
+      } else {
+        throw new Error(data.error || "Failed to save");
+      }
+    } catch (err) {
+      setTelegramTestResult({ success: false, error: err instanceof Error ? err.message : "Failed to save" });
+    } finally {
+      setTelegramSaving(false);
+    }
+  }
+
+  async function handleTestTelegram() {
+    setTelegramTesting(true);
+    setTelegramTestResult(null);
+    try {
+      const res = await fetch("/api/telegram/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(telegramForm),
+      });
+      const data = await res.json();
+      setTelegramTestResult(data);
+    } catch (err) {
+      setTelegramTestResult({ success: false, error: err instanceof Error ? err.message : "Test failed" });
+    } finally {
+      setTelegramTesting(false);
+    }
+  }
+
+  // Load Telegram settings on mount
+  useEffect(() => {
+    loadTelegramSettings();
+  }, []);
+
   return (
     <div className="p-8 space-y-6">
       <div>
@@ -401,8 +484,26 @@ export default function SettingsPage() {
         </p>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-1 p-1 bg-slate-800 rounded-lg">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === tab.id
+                ? "bg-violet-600 text-white"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-700"
+            }`}
+          >
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* AI Provider Configuration */}
-      <div className="bg-slate-900 rounded-xl border border-slate-700 p-6 space-y-4">
+      {activeTab === "ai" && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Settings2 className="w-4 h-4 text-violet-400" />
@@ -713,8 +814,10 @@ export default function SettingsPage() {
           </p>
         )}
       </div>
+      )}
 
       {/* Email Provider */}
+      {activeTab === "email" && (
       <div className="bg-slate-900 rounded-xl border border-slate-700 p-6 space-y-4">
         <div className="flex items-center gap-2">
           <Mail className="w-4 h-4 text-blue-400" />
@@ -1027,8 +1130,91 @@ export default function SettingsPage() {
           </p>
         )}
       </div>
+      )}
+
+      {/* Telegram Notifications */}
+      {activeTab === "notifications" && (
+      <div className="bg-slate-900 rounded-xl border border-slate-700 p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <Bell className="w-4 h-4 text-emerald-400" />
+          <h3 className="text-sm font-semibold text-slate-200">Telegram Notifications</h3>
+        </div>
+        <p className="text-xs text-slate-400">
+          Get instant notifications on Telegram when emails are sent, opened, or replied.
+        </p>
+
+        <div className="space-y-4">
+          {/* Bot Token */}
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Bot Token</label>
+            <input
+              type="password"
+              value={telegramForm.botToken}
+              onChange={(e) => setTelegramForm({ ...telegramForm, botToken: e.target.value })}
+              placeholder={telegramSettings ? "••••••••••••••" : "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"}
+              className="w-full px-3 py-2 border border-slate-700 rounded-lg text-sm bg-slate-900 text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+            <p className="text-[10px] text-slate-500 mt-1">
+              Create a bot via <a href="https://t.me/botfather" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:underline">@BotFather</a>
+            </p>
+          </div>
+
+          {/* Chat ID */}
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Chat ID</label>
+            <input
+              type="text"
+              value={telegramForm.chatId}
+              onChange={(e) => setTelegramForm({ ...telegramForm, chatId: e.target.value })}
+              placeholder="123456789"
+              className="w-full px-3 py-2 border border-slate-700 rounded-lg text-sm bg-slate-900 text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+            <p className="text-[10px] text-slate-500 mt-1">
+              Get your Chat ID via <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:underline">@userinfobot</a>
+            </p>
+          </div>
+
+          {/* Status */}
+          {telegramSettings && (
+            <div className="flex items-center gap-2 p-3 bg-emerald-900/20 border border-emerald-800/30 rounded-lg">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-xs text-emerald-300">Telegram notifications configured</span>
+            </div>
+          )}
+
+          {/* Test Result */}
+          {telegramTestResult && (
+            <p className={`text-xs flex items-center gap-1.5 ${telegramTestResult.success ? "text-emerald-400" : "text-red-400"}`}>
+              {telegramTestResult.success ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+              {telegramTestResult.success ? "Test notification sent!" : telegramTestResult.error}
+            </p>
+          )}
+
+          {/* Actions */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSaveTelegram}
+              disabled={telegramSaving || (!telegramForm.botToken && !telegramSettings) || !telegramForm.chatId}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+            >
+              {telegramSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+              {telegramSaving ? "Saving..." : "Save Settings"}
+            </button>
+            <button
+              onClick={handleTestTelegram}
+              disabled={telegramTesting || !telegramForm.botToken || !telegramForm.chatId}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-slate-200 rounded-lg text-sm font-medium hover:bg-slate-600 disabled:opacity-50 transition-colors"
+            >
+              {telegramTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+              {telegramTesting ? "Testing..." : "Test"}
+            </button>
+          </div>
+        </div>
+      </div>
+      )}
 
       {/* Danger Zone */}
+      {activeTab === "data" && (
       <div className="bg-slate-900 rounded-xl border border-red-900/40 p-6 space-y-4">
         <div className="flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-red-400" />
@@ -1119,6 +1305,7 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
